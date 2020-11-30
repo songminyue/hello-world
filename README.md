@@ -8,7 +8,7 @@ Note. As a unified visual platform of SDN controller, AFC docks over business re
 ### Architectural
 Networking-afc Neutron Plugin 
 
-![networking-afc]()
+![NETWORKING-AFC.png](https://github.com/songminyue/hello-world/NETWORKING-AFC.png)
 
 ### Supported components:
 
