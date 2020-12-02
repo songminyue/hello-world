@@ -15,7 +15,7 @@ Networking-afc Neutron Plugin
 |components||
 |:-----------------:|:---------------------------:|
 |Openstack version   |Rocky                        |
-|Asterfusion switches|CX306P|
+|Asterfusion switches|CX306P, CX564P|
 |Linux Distribution  |Centos7.6|
 |Type driver         |Aster_vxlan, Aster_ext_net|
 |Mechanism Driver    |AsterCXSwitchMechanismDriver|
@@ -108,7 +108,6 @@ OPENSTACK_NEUTRON_NETWORK = {
             'aster_vxlan': (1, (2 ** 24) - 1),
         }
 }
-        
         
 ```
 
