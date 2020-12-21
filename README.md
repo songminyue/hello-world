@@ -1,15 +1,16 @@
 # Networking-afc Plugin for OpenStack Neutron
 
 ## Overview
-Based on the OpenStack Networking ML2 plugin which provides an extensible architecture that supports multiple independent drivers to be used to configure different network devices from different vendors, Networking-afc Neutron Plugin offers infrastructure services for Asterfusion’s  switches and configure the underlying physical network with cooperation of Asteris Fabric SDN Controller (AFC for short). Networking-afc Neutron Plugin can efficiently offload Layer 2 and layer 3 network functions on switches to allow VM traffic for North-South & East-West while to improve the performance of compute nodes in the cloud environment.
+Based on the OpenStack Networking ML2 plugin which provides an extensible architecture that supports multiple independent drivers to be used to configure different network devices from different vendors, Networking-afc Neutron Plugin offers infrastructure services for Asterfusion’s  switches and configure the underlying physical network with cooperation of Asteris Fabric SDN Controller (AFC for short). Networking-afc Neutron Plugin can efficiently implement distributed Overlay  network  and offload Layer 2 and layer 3 vxlan network functions such as packaging or unpackaging the vxlan tunnel of Overlay onto physical switches. It helps to allow VM traffic for North-South & East-West while to improve the forwarding performance and reliability of cloud networks and reduce the CPU overhead consumed by computing nodes on the network.
 
-Note. As a unified visual platform of SDN controller, AFC docks over business requirements from the overlay network and frees up the capability of the Asterfusion basic network.
+Note. As a unified visual platform of SDN controller, AFC monitors and manages business maintenance in hardware devices through network topology. In addition, it can rapidly deploy or uninstall the networking-afc plugin facing Asterfusion programmable switches to meet business requirements of overlay network and frees up the capability of the Asterfusion basic network. AFC uses standard network protocols to manage network resources and docks with the  computing resources through the standardized southbound interface to realizes the collaboration between computing and network resources. It can not only undertake the work of business presentation/collaboration independently, but also supports the ability to connect with the cloud platform like openstack through the open capability of The Northbound Restful interface.
 
-### Architectural
-Networking-afc Neutron Plugin 
+<!--
+    ### Architectural
+    Networking-afc Neutron Plugin 
 
-<img src="https://github.com/songminyue/hello-world/blob/main/NETWORKING-AFC.png" width="50%" >
-
+    <img src="https://github.com/songminyue/hello-world/blob/main/NETWORKING-AFC.png" width="50%" >
+-->
 ### Supported components:
 
 |components||
@@ -28,15 +29,20 @@ Networking-afc Neutron Plugin
 
 ## Configuration
 
-1.  ML2 plugin Configuration on the controller
-> add type_driver and mechanism_drivers of asterfusion in /etc/neutron/plugins/ml2/ml2_conf.ini
+AFC can rapidly deploy or uninstall the networking-afc plugin facing Asterfusion programmable switches to meet business requirements of overlay network and frees up the capability of the Asterfusion basic network. 
+More details of Asterfusion programmable switches and obtainment of AFC can refer to https://asterfusion.com/index.php/zh/product-zn/afc
+
+Meanwhile, networking-afc plugin also supports the manually installment step by step as below.
+
+1.  ML2 plugin Configuration on the controller 
+ >Add type_driver and mechanism_drivers of asterfusion in /etc/neutron/plugins/ml2/ml2_conf.ini
 ```    
 [ml2]
     mechanism_drivers=asterswitch,openvswitch
     type_drivers=vxlan,flat,vlan,local,aster_vxlan, aster_ext_net
     tenant_network_types=aster_vxlan
 ```
-  physnet_4_102/physnet_4_105 is the provider number of asterfusion’s switch, following “30:50” is the vlan range which can be same within two switches but have to be in the range 2-4094
+  Give the provider number of asterfusion’s switch (e.g. physnet_4_102/physnet_4_105), and vlan range for networks which can be same within two switches but have to be in the range 2-4094. For aster_vxlan type, vni_range and l3_vni_range are setted for Layer 2 and Layer3 network respectively.
 ```
 [ml2_type_vlan]
     network_vlan_ranges=physnet_4_102:30:50,physnet_4_105:100:200
@@ -51,14 +57,14 @@ Networking-afc Neutron Plugin
 [ml2_type_aster_ext_net]
     aster_ext_net_networks=fw1,fw2
 ```
-  External network configuration where physical_network_ports_mapping shows the border’s interface connected with cooresponding External network
+  External network configuration where physical_network_ports_mapping shows the border’s interface connected with cooresponding External network. External network is given by aster_ext_net type.
 ```
 [ml2_border_leaf:192.168.4.102]
     # Border leaf connect FW vlan ranges and interface_names
     vlan_ranges=30:50
     physical_network_ports_mapping=fw1:[X28],fw2:[X27, X29]
 ```
-  host_ports_mapping is the maping of node’s hostname and interfaces of cx connected with node
+  Physnet is given to distinguish between different switches and host_ports_mapping is the maping of node’s hostname and interfaces of cx connected with node
 ```
 [ml2_mech_aster_cx:192.168.4.102]
     physnet=physnet_4_102
@@ -68,7 +74,7 @@ Networking-afc Neutron Plugin
     physnet=physnet_4_105
     host_ports_mapping=controller:[X25],computer1:[X29],computer2:[X37]
 ```
-  configurate the parameters of AFC
+  Configurate the parameters of AFC to support the Northbound REST APIs interfacing with networking-afc driver
 ```
 [aster_authtoken]
     username=aster
@@ -81,7 +87,7 @@ Networking-afc Neutron Plugin
 service_plugins=afc_l3
 ```
 
-2.  add supported_provider_types “aster_vxlan”, “aster_ext_net” in /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py on the node where horizon is deployed
+2.  In order to make supported_provider_types on the dashboard visible, it is necessary to add“aster_vxlan”, “aster_ext_net” in /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py on the node where horizon is deployed
 ```
 OPENSTACK_NEUTRON_NETWORK = {
   …… ……
@@ -110,21 +116,28 @@ OPENSTACK_NEUTRON_NETWORK = {
 }
         
 ```
-
-3.  All nodes with neutron-openvswitch-agent installed need to be configured in /etc/neutron/plugins/ml2/openvswitch_agent.ini, firstly comment out the tunnel_types option, then add bridge_mappings and restart neutron-openvswitch-agent
+3.  To reach the external virtual machine, it’s necessary to add a ovs bridge on server and bond the switch’s ports (e.g. eth1) connected with the server node to the bridge. The bridge name is associated with provider number of switch.
 ```
-bridge_mappings=physnet_4_102:br_4_102
+ovs-vsctl add-br br-physnet_4_102 
+ovs-vsctl add-port br-physnet_4_102 eth1
+```
+
+4.  Then the mapping relationship of ovs bridge and switch can be established. All nodes installed neutron-openvswitch-agent need to be configured in /etc/neutron/plugins/ml2/openvswitch_agent.ini respectively.
+```
+bridge_mappings=physnet_4_102:br_physnet_4_102
 systemctl restart neutron-openvswitch-agent
 ```
-4.  Install
+5.  Install
 install networking-afc plugin and update database
 ```
 pip install networking_afc_v1.0-xxxxx.whl (network link)
 neutron-db-manage --subproject networking_afc upgrade head
 ```
 
-5.  Restart service on controller
+6.  Restart service on controller
 ```
 systemctl restart httpd 
 systemctl restart neutron-server
 ```
+
+
