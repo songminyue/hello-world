@@ -3,7 +3,7 @@
 ## Overview
 Based on the OpenStack Networking ML2 plugin which provides an extensible architecture that supports multiple independent drivers to be used to configure different network devices from different vendors, Networking-afc Neutron Plugin offers infrastructure services for Asterfusion’s  switches and configure the underlying physical network with cooperation of Asteris Fabric SDN Controller (AFC for short). Networking-afc Neutron Plugin can efficiently implement distributed Overlay  network  and offload Layer 2 and layer 3 vxlan network functions such as packaging or unpackaging the vxlan tunnel of Overlay onto physical switches. It helps to allow VM traffic for North-South & East-West while to improve the forwarding performance and reliability of cloud networks and reduce the CPU overhead consumed by computing nodes on the network.
 
-Note. As a unified visual platform of SDN controller, AFC monitors and manages business maintenance in hardware devices through network topology. In addition, it can rapidly deploy or uninstall the networking-afc plugin facing Asterfusion programmable switches to meet business requirements of overlay network and frees up the capability of the Asterfusion basic network. AFC uses standard network protocols to manage network resources and docks with the  computing resources through the standardized southbound interface to realizes the collaboration between computing and network resources. It can not only undertake the work of business presentation/collaboration independently, but also supports the ability to connect with the cloud platform like openstack through the open capability of The Northbound Restful interface.
+Note. As a unified visual platform of SDN controller, AFC monitors and manages business maintenance in hardware devices through network topology. In addition, it can rapidly deploy or uninstall the networking-afc plugin facing Asterfusion programmable switches to meet business requirements of overlay network and to free up the capability of the Asterfusion basic network. AFC uses standard network protocols to manage network resources and docks with the  computing resources through the standardized southbound interface to realizes the collaboration between computing and network resources. It can not only undertake the work of business presentation/collaboration independently, but also supports the ability to connect with the cloud platform like openstack through the open capability of The Northbound Restful interface.
 
 <!--
     ### Architectural
@@ -29,10 +29,21 @@ Note. As a unified visual platform of SDN controller, AFC monitors and manages b
 
 ## Configuration
 
-AFC can rapidly deploy or uninstall the networking-afc plugin facing Asterfusion programmable switches to meet business requirements of overlay network and frees up the capability of the Asterfusion basic network. 
+It is recommended to use AFC for its advantages that AFC can rapidly deploy or uninstall the networking-afc plugin facing Asterfusion programmable switches and present the network resource status of cloud platform.
 More details of Asterfusion programmable switches and obtainment of AFC can refer to https://asterfusion.com/index.php/zh/product-zn/afc
 
-Meanwhile, networking-afc plugin also supports the manually installment step by step as below.
+Meanwhile, networking-afc plugin also supports the manually installment.
+
+0.  To be convenient for uninstallment of plugin, first we need to backup the configuration files:
+```
+Controller node:
+/etc/neutron/neutron.conf
+/etc/neutron/plugins/ml2/ml2_conf.ini
+/usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py
+Compute node:
+/etc/neutron/plugins/ml2/openvswitch_agent.ini
+```
+Then we can configurate the controller and compute nodes for networking-afc plugin deployment step by step as below.
 
 1.  ML2 plugin Configuration on the controller 
  >Add type_driver and mechanism_drivers of asterfusion in /etc/neutron/plugins/ml2/ml2_conf.ini
@@ -82,7 +93,7 @@ Meanwhile, networking-afc plugin also supports the manually installment step by 
     auth_uri=http://192.168.4.169:9696
     is_send_afc=True
 ```
-> add plugin configuration in /etc/neutron/neutron.conf
+> Add plugin configuration in /etc/neutron/neutron.conf
 ```
 service_plugins=afc_l3
 ```
@@ -127,17 +138,29 @@ ovs-vsctl add-port br-physnet_4_102 eth1
 bridge_mappings=physnet_4_102:br_physnet_4_102
 systemctl restart neutron-openvswitch-agent
 ```
-5.  Install
-install networking-afc plugin and update database
+## Install 
+1.  Install networking-afc plugin and update database
 ```
-pip install networking_afc_v1.0-xxxxx.whl (network link)
+pip install networking_afc_v1.0-xxxxx.whl
 neutron-db-manage --subproject networking_afc upgrade head
 ```
 
-6.  Restart service on controller
+2.  Restart services on controller
 ```
 systemctl restart httpd 
 systemctl restart neutron-server
 ```
 
-
+##  uninstall
+1.  Uninstall neiworking-afc plugin.
+```
+pip uninstall networking_afc_v1.0-xxxxx.whl
+```
+2.  Overwrite the configuration file with the backup files in step.0 and restart the services respectively.
+```
+# controller node
+systemctl restart httpd 
+systemctl restart neutron-server
+# compute node
+systemctl restart neutron-openvswitch-agent
+```
