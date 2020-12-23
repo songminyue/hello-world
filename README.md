@@ -45,15 +45,16 @@ Compute node:
 ```
 Then we can configurate the controller and compute nodes for networking-afc plugin deployment step by step as below.
 
-1.  ML2 plugin Configuration on the controller 
- >Add type_driver and mechanism_drivers of asterfusion in /etc/neutron/plugins/ml2/ml2_conf.ini
+1.  Add ML2 plugin Configuration in /etc/neutron/plugins/ml2/ml2_conf.ini on controller node
+
+1). Add type_driver and mechanism_drivers of asterfusion
 ```    
 [ml2]
     mechanism_drivers=asterswitch,openvswitch
     type_drivers=vxlan,flat,vlan,local,aster_vxlan, aster_ext_net
     tenant_network_types=aster_vxlan
 ```
-  Give the provider number of asterfusion’s switch (e.g. physnet_4_102/physnet_4_105), and vlan range for networks which can be same within two switches but have to be in the range 2-4094. For aster_vxlan type, vni_range and l3_vni_range are setted for Layer 2 and Layer3 network respectively.
+2). Give the provider number of asterfusion’s switch (e.g. physnet_4_102/physnet_4_105), and vlan range for networks which can be same within two switches but have to be in the range 2-4094. For aster_vxlan type, vni_range and l3_vni_range are setted for Layer 2 and Layer3 network respectively.
 ```
 [ml2_type_vlan]
     network_vlan_ranges=physnet_4_102:30:50,physnet_4_105:100:200
@@ -68,14 +69,14 @@ Then we can configurate the controller and compute nodes for networking-afc plug
 [ml2_type_aster_ext_net]
     aster_ext_net_networks=fw1,fw2
 ```
-  External network configuration where physical_network_ports_mapping shows the border’s interface connected with cooresponding External network. External network is given by aster_ext_net type.
+3). External network configuration where physical_network_ports_mapping shows the border’s interface connected with cooresponding External network. External network is given by aster_ext_net type.
 ```
 [ml2_border_leaf:192.168.4.102]
     # Border leaf connect FW vlan ranges and interface_names
     vlan_ranges=30:50
     physical_network_ports_mapping=fw1:[X28],fw2:[X27, X29]
 ```
-  Physnet is given to distinguish between different switches and host_ports_mapping is the maping of node’s hostname and interfaces of cx connected with node
+4). Physnet is given to distinguish between different switches and host_ports_mapping is the maping of node’s hostname and interfaces of cx connected with node
 ```
 [ml2_mech_aster_cx:192.168.4.102]
     physnet=physnet_4_102
@@ -85,7 +86,7 @@ Then we can configurate the controller and compute nodes for networking-afc plug
     physnet=physnet_4_105
     host_ports_mapping=controller:[X25],computer1:[X29],computer2:[X37]
 ```
-  Configurate the parameters of AFC to support the Northbound REST APIs interfacing with networking-afc driver
+5). Configurate the parameters of AFC to support the Northbound REST APIs interfacing with networking-afc driver
 ```
 [aster_authtoken]
     username=aster
@@ -93,12 +94,12 @@ Then we can configurate the controller and compute nodes for networking-afc plug
     auth_uri=http://192.168.4.169:9696
     is_send_afc=True
 ```
-> Add plugin configuration in /etc/neutron/neutron.conf
+2.  Add plugin configuration in /etc/neutron/neutron.conf on controller
 ```
 service_plugins=afc_l3
 ```
 
-2.  In order to make supported_provider_types on the dashboard visible, it is necessary to add“aster_vxlan”, “aster_ext_net” in /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py on the node where horizon is deployed
+3.  In order to make supported_provider_types on the dashboard visible, it is necessary to add“aster_vxlan”, “aster_ext_net” in /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py on the controller node where horizon is deployed
 ```
 OPENSTACK_NEUTRON_NETWORK = {
   …… ……
@@ -127,13 +128,13 @@ OPENSTACK_NEUTRON_NETWORK = {
 }
         
 ```
-3.  To reach the external virtual machine, it’s necessary to add a ovs bridge on server and bond the switch’s ports (e.g. eth1) connected with the server node to the bridge. The bridge name is associated with provider number of switch.
+4.  To reach the external virtual machine, it’s necessary to add a ovs bridge on compute node and bond the switch’s ports (e.g. eth1) connected with the server node to the bridge. The bridge name is associated with provider number of switch.
 ```
 ovs-vsctl add-br br-physnet_4_102 
 ovs-vsctl add-port br-physnet_4_102 eth1
 ```
 
-4.  Then the mapping relationship of ovs bridge and switch can be established. All nodes installed neutron-openvswitch-agent need to be configured in /etc/neutron/plugins/ml2/openvswitch_agent.ini respectively.
+5.  Then the mapping relationship of ovs bridge and switch can be established. All compute nodes installed neutron-openvswitch-agent need to be configured in /etc/neutron/plugins/ml2/openvswitch_agent.ini respectively.
 ```
 bridge_mappings=physnet_4_102:br_physnet_4_102
 systemctl restart neutron-openvswitch-agent
